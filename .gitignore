@@ -1,2 +1,14 @@
-# .gitignore
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.env
+*.venv
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
 .vs/
