@@ -1,0 +1,10 @@
+services:
+  bot:
+    build: .
+    env_file:
+      - .env
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
