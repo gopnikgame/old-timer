@@ -10,6 +10,7 @@ from app.handlers import base, karma  # Импортируем handlers
 from app.middlewares.logging import LoggingMiddleware
 from app.middlewares.topic_check import TopicCheckMiddleware  # Импортируем middleware
 from app.db.database import init_db, db  # Import database
+from app.utils.formatting import format_user
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
