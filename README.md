@@ -34,6 +34,7 @@ old-timer/
 ├── launcher.sh   # Скрипт для автоматической установки
 ├── .env.example  # Пример файла с переменными окружения
 ├── .gitignore    # Файл с исключениями для Git
+├── db_schema.sql # Схема базы данных
 ├── docker-compose.yml # Файл для Docker Compose
 ├── LICENSE       # Лицензия
 └── README.md     # Этот файл
