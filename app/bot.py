@@ -9,6 +9,7 @@ from app.config import Config
 from app.handlers import base, karma  # Импортируем handlers
 from app.middlewares.logging import LoggingMiddleware
 from app.middlewares.topic_check import TopicCheckMiddleware  # Импортируем middleware
+from app.db.database import init_db, db  # Import database
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -29,11 +30,15 @@ async def main():
     dp.include_router(base.router)
     dp.include_router(karma.router)  # Подключаем handlers для кармы
 
+    # Initialize database
+    await init_db()
+
     # Запуск polling
     try:
         await dp.start_polling(bot, skip_updates=True)
     finally:
         await bot.session.close()
+        await db.close()
 
 if __name__ == "__main__":
     try:
