@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import json
 
 import asyncpg
 
@@ -67,9 +68,84 @@ class Database:
                 logger.exception("Error creating karma table")
                 raise
 
+    async def create_predictions_table(self):
+        async with self.pool.acquire() as conn:
+            try:
+                await conn.execute("""
+                    CREATE TABLE IF NOT EXISTS predictions (
+                        id SERIAL PRIMARY KEY,
+                        user_id BIGINT NOT NULL,
+                        prediction_text TEXT NOT NULL,
+                        created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() at time zone 'utc')
+                    )
+                """)
+                logger.info("Predictions table created (if not exists)")
+
+                await conn.execute("""
+                    CREATE TABLE IF NOT EXISTS predictions_archive (
+                        user_id BIGINT NOT NULL,
+                        prediction_text TEXT NOT NULL
+                    )
+                """)
+                logger.info("predictions_archive table created (if not exists)")
+            except Exception as e:
+                logger.exception("Error creating predictions table")
+                raise
+
+    async def create_karma_updates_table(self):
+        async with self.pool.acquire() as conn:
+            try:
+                await conn.execute("""
+                    CREATE TABLE IF NOT EXISTS karma_updates (
+                        user_id BIGINT NOT NULL,
+                        karma INT NOT NULL,
+                        timestamp DOUBLE PRECISION NOT NULL
+                    )
+                """)
+                logger.info("karma_updates table created (if not exists)")
+            except Exception as e:
+                logger.exception("Error creating karma_updates table")
+                raise
+
+    async def check_initial_predictions_inserted(self):
+        try:
+            record = await self.fetchone("SELECT COUNT(*) FROM predictions")
+            if record:
+                return record['count'] > 0
+            return False
+        except Exception as e:
+            logger.exception(f"Error checking initial predictions: {e}")
+            return False
+
+    async def insert_initial_predictions(self, file_path: str):
+        try:
+            with open(file_path, 'r') as f:
+                predictions = json.load(f)
+
+            for prediction in predictions:
+                user_id = prediction['user_id']
+                prediction_text = prediction['prediction_text']
+                await self.execute(
+                    """
+                    INSERT INTO predictions (user_id, prediction_text)
+                    VALUES ($1, $2)
+                    """,
+                    user_id,
+                    prediction_text
+                )
+            logger.info(f"Initial predictions inserted from {file_path}")
+        except Exception as e:
+            logger.exception(f"Error inserting initial predictions from {file_path}: {e}")
+
 # Создаем экземпляр базы данных
 db = Database()
 
 async def init_db():
     await db.create_pool()
     await db.create_tables()
+    await db.create_predictions_table()
+    await db.create_karma_updates_table()
+
+    # Check if initial predictions are already inserted
+    if not await db.check_initial_predictions_inserted():
+        await db.insert_initial_predictions(Config.INITIAL_PREDICTIONS_FILE)
