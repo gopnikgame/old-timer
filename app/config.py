@@ -20,6 +20,12 @@ class Config:
     KARMA_DB_PATH = os.getenv("KARMA_DB", "/data/karma.json")
     DEEPSEEK_DAILY_LIMIT = os.getenv("DEEPSEEK_DAILY_LIMIT", "5")
 
+    # PostgreSQL Configuration
+    POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
+    POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "postgres")
+    POSTGRES_DB = os.getenv("POSTGRES_DB", "botdb")
+    POSTGRES_HOST = os.getenv("POSTGRES_HOST", "db") # Use the service name from docker-compose.yml
+
     # Проверка наличия обязательных переменных
     if not all([BOT_TOKEN, GROUP_ID, ALLOWED_TOPIC_ID, ALLOWED_TOPIC_URL, ALLOWED_IDS]):
         logger.error("Не заданы обязательные переменные окружения!")
