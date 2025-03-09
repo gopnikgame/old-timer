@@ -1,5 +1,6 @@
 import logging
 import time
+import datetime
 
 from app.db.database import db
 
@@ -36,6 +37,15 @@ async def update_karma(user_id: int, change: int):
             user_id,
             change
         )
+        await db.execute(
+            """
+            INSERT INTO karma_updates (user_id, karma, timestamp)
+            VALUES ($1, $2, $3)
+            """,
+            user_id,
+            change,
+            now
+        )
         LAST_UPDATE_TIMES[user_id] = now
         return True
     except Exception as e:
@@ -63,3 +73,19 @@ async def get_bottom_karma(limit: int = 10):
     except Exception as e:
         logger.exception(f"Error getting bottom karma: {e}")
         return []
+
+async def compute_period_karma(user_id: int, start_ts: float, end_ts: float) -> int:
+    try:
+        records = await db.fetchmany(
+            """
+            SELECT karma FROM karma_updates 
+            WHERE user_id = $1 AND timestamp >= $2 AND timestamp < $3
+            """,
+            user_id,
+            start_ts,
+            end_ts
+        )
+        return sum(record['karma'] for record in records)
+    except Exception as e:
+        logger.exception(f"Error computing period karma for user {user_id}: {e}")
+        return 0
