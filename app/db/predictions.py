@@ -26,6 +26,8 @@ async def get_prediction():
         if record:
             prediction = record['prediction_text']
             prediction_id = record['id']
+            # Archive used prediction
+            await archive_prediction(record['user_id'], record['prediction_text'])
             # Remove used prediction
             await db.execute("DELETE FROM predictions WHERE id = $1", prediction_id)
             return prediction
@@ -38,6 +40,8 @@ async def get_prediction():
         if record:
             prediction = record['prediction_text']
             prediction_id = record['id']
+            # Archive used prediction
+            await archive_prediction(record['user_id'], record['prediction_text'])
             # Remove used prediction
             await db.execute("DELETE FROM predictions WHERE id = $1", prediction_id)
             return prediction
