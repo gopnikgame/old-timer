@@ -1,8 +1,12 @@
+import asyncio
+import logging
 from datetime import datetime
 from tinydb import TinyDB, Query
 from pathlib import Path
 import random
 from app.config import Config
+
+logger = logging.getLogger(__name__)
 
 class PredictionManager:
     def __init__(self):
@@ -11,21 +15,35 @@ class PredictionManager:
         self.query = Query()
 
     async def get_prediction(self):
-        available = self.predictions.search(self.query.used == False)
-        if not available:
-            self._reset_predictions()
-            available = self.predictions.all()
-            
-        prediction = random.choice(available)
-        self.predictions.update({'used': True}, doc_ids=[prediction.doc_id])
-        return prediction['text']
+        try:
+            available = await asyncio.to_thread(self.predictions.search, self.query.used == False)
+            if not available:
+                await self._reset_predictions()
+                available = await asyncio.to_thread(self.predictions.all)
 
-    def _reset_predictions(self):
-        self.predictions.update({'used': False})
+            if not available:
+                logger.warning("Нет доступных предсказаний.")
+                return "🔮 Нет предсказаний."
+
+            prediction = random.choice(available)
+            await asyncio.to_thread(self.predictions.update, {'used': True}, doc_ids=[prediction.doc_id])
+            return prediction['text']
+        except Exception as e:
+            logger.exception("Ошибка при получении предсказания.")
+            return "🔮 Ошибка предсказания."
+
+    async def _reset_predictions(self):
+        try:
+            await asyncio.to_thread(self.predictions.update, {'used': False})
+        except Exception as e:
+            logger.exception("Ошибка при сбросе предсказаний.")
 
     def add_prediction(self, text: str):
-        self.predictions.insert({
-            'text': text,
-            'used': False,
-            'created_at': datetime.now().isoformat()
-        })
+        try:
+            self.predictions.insert({
+                'text': text,
+                'used': False,
+                'created_at': datetime.now().isoformat()
+            })
+        except Exception as e:
+            logger.exception(f"Ошибка при добавлении предсказания: {text}")
