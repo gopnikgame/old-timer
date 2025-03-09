@@ -15,9 +15,6 @@ class Config:
     ALLOWED_IDS = os.getenv("ALLOWED_IDS")
 
     DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-
-    PREDICTIONS_FILE = os.getenv("PREDICTIONS_FILE", "/data/predictions.json")
-    KARMA_DB_PATH = os.getenv("KARMA_DB", "/data/karma.json")
     DEEPSEEK_DAILY_LIMIT = os.getenv("DEEPSEEK_DAILY_LIMIT", "5")
 
     # PostgreSQL Configuration
