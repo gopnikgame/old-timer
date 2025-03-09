@@ -53,8 +53,23 @@ class Database:
             await self.pool.close()
             logger.info("Database pool closed")
 
+    async def create_tables(self):
+        async with self.pool.acquire() as conn:
+            try:
+                await conn.execute("""
+                    CREATE TABLE IF NOT EXISTS karma (
+                        user_id BIGINT PRIMARY KEY,
+                        karma INT NOT NULL DEFAULT 0
+                    )
+                """)
+                logger.info("Karma table created (if not exists)")
+            except Exception as e:
+                logger.exception("Error creating karma table")
+                raise
+
 # Создаем экземпляр базы данных
 db = Database()
 
 async def init_db():
     await db.create_pool()
+    await db.create_tables()
