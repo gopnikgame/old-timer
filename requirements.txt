@@ -1,6 +1,6 @@
 aiogram>=3.0
 python-dotenv>=0.19
-tinydb>=4.7
 aiofiles>=22.1
 python-multipart>=0.0.5
 httpx>=0.23
+asyncpg>=0.29.0
