@@ -7,12 +7,11 @@ import logging
 from datetime import datetime
 
 from app.config import Config
-from app.db.predictions import PredictionManager
+from app.db.predictions import add_prediction  # Import the async add_prediction function
 from app.utils.formatting import format_user
 
 logger = logging.getLogger(__name__)
 router = Router()
-prediction_manager = PredictionManager()
 
 # Глобальный счётчик запросов к DeepSeek (TODO: заменить на более надежное хранилище)
 DEEPSEEK_REQUESTS_COUNT = 0
@@ -126,7 +125,8 @@ async def add_prediction(message: Message):
             )
 
         prediction = await generate_with_deepseek(prompt)
-        prediction_manager.add_prediction(prediction)
+        # Use the add_prediction function from app.db.predictions
+        await add_prediction(message.from_user.id, prediction)
 
         await message.reply(
             f"✅ Новое предсказание добавлено:\n\n{prediction}\n\n"
