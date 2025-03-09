@@ -5,9 +5,6 @@ __pycache__/
 *.env
 *.venv
 
-# DB
-*.sql
-
 # Logs
 *.log
 
