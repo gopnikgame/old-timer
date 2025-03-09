@@ -25,6 +25,7 @@ old-timer/
 ├── launcher.sh
 ├── .env.example
 ├── .gitignore
+├── db_schema.sql # Схема базы данных
 ├── docker-compose.yml
 ├── LICENSE
 └── README.md
