@@ -15,6 +15,7 @@ class Config:
     ALLOWED_IDS = os.getenv("ALLOWED_IDS")
 
     DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+
     DEEPSEEK_DAILY_LIMIT = os.getenv("DEEPSEEK_DAILY_LIMIT", "5")
 
     # PostgreSQL Configuration
@@ -22,6 +23,7 @@ class Config:
     POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "postgres")
     POSTGRES_DB = os.getenv("POSTGRES_DB", "botdb")
     POSTGRES_HOST = os.getenv("POSTGRES_HOST", "db") # Use the service name from docker-compose.yml
+    INITIAL_PREDICTIONS_FILE = os.getenv("INITIAL_PREDICTIONS_FILE", "data/initial_predictions.json")
 
     # Проверка наличия обязательных переменных
     if not all([BOT_TOKEN, GROUP_ID, ALLOWED_TOPIC_ID, ALLOWED_TOPIC_URL, ALLOWED_IDS]):
@@ -33,8 +35,6 @@ class Config:
         ALLOWED_TOPIC_ID = int(ALLOWED_TOPIC_ID)
         ALLOWED_IDS = set(map(int, ALLOWED_IDS.split(",")))
         DEEPSEEK_DAILY_LIMIT = int(DEEPSEEK_DAILY_LIMIT)
-        PREDICTIONS_FILE = Path(PREDICTIONS_FILE)
-        KARMA_DB_PATH = Path(KARMA_DB_PATH)
     except ValueError as e:
         logger.error(f"Ошибка приведения типов переменных окружения: {e}")
         raise
@@ -67,7 +67,7 @@ class Config:
         "отстой", "ненавижу", "бесишь", "уйди", "исчезни",
         "заткнись", "надоел", "достал", "отвратительно", "фигня",
         "хрень", "лажа", "кошмар", "ужас", "отстойно",
-        "плохо", "отвратно", "умник нашёлся", "гений блин",
+        "плохо", "отвратно", "умник нашёлся", "гений блин", 
         "не очень", "слабовато", "так себе", "посредственно",
         "ниже среднего", "можно лучше", "брабус"
     }
