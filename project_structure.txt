@@ -19,10 +19,10 @@ old-timer/
 │       ├── __init__.py
 │       └── formatting.py
 ├── scripts/
-│   ├── manage_bot.sh
-│   ├── launcher.sh
+│   └── manage_bot.sh
 ├── data/
 │   └── initial_predictions.json
+├── launcher.sh
 ├── .env.example
 ├── .gitignore
 ├── docker-compose.yml
