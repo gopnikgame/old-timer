@@ -14,7 +14,7 @@ class TopicCheckMiddleware(BaseMiddleware):
         event: Message,
         data: dict[str, Any]
     ) -> Any:
-        if event.chat.id == Config.GROUP_ID and event.message_thread_id != Config.ALLOWED_TOPIC_ID:
+        if Config.ALLOWED_TOPIC_ID is not None and event.chat.id == Config.GROUP_ID and event.message_thread_id != Config.ALLOWED_TOPIC_ID:
             logger.warning(f"Сообщение от пользователя {event.from_user.id} в неразрешенном топике.")
             return  # Игнорируем сообщение
 
