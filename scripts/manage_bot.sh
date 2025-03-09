@@ -14,8 +14,8 @@ WHITE='\033[0;37m'
 NC='\033[0m' # No Color
 
 # Файлы логов
-BOT_LOG_FILE="/opt/telegram-publisher-bot/logs/bot.log"
-ERROR_LOG_FILE="/opt/telegram-publisher-bot/logs/error.log"
+BOT_LOG_FILE="/opt/old-timer/logs/bot.log"
+ERROR_LOG_FILE="/opt/old-timer/logs/error.log"
 
 # Функция для логирования
 log() {
@@ -55,28 +55,23 @@ manage_env_file() {
             cat > "$env_file" << EOL
 # Конфигурация бота
 BOT_TOKEN=
-ADMIN_IDS=
-CHANNEL_ID=
-BOT_NAME=telegram-publisher-bot
+GROUP_ID=
+ALLOWED_TOPIC_ID=
+ALLOWED_TOPIC_URL=
+ALLOWED_IDS=
 
-# Настройки форматирования
-DEFAULT_FORMAT=markdown
-MAX_FILE_SIZE=20971520
+# Настройки DeepSeek
+DEEPSEEK_API_KEY=
+DEEPSEEK_DAILY_LIMIT=5
 
-# Ссылки
-CHANNEL_NAME=PUBLIC
-CHANNEL_LINK=https://t.me/yourchannel
-MAIN_BOT_NAME=Bot
-MAIN_BOT_LINK=https://t.me/mainbot
-SUPPORT_BOT_NAME=SUPPORT
-SUPPORT_BOT_LINK=https://t.me/supportbot
+# Настройки PostgreSQL
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=botdb
+POSTGRES_HOST=db
 
-# Тестовый режим
-TEST_MODE=false
-TEST_CHAT_ID=
-
-# Прокси (если нужен)
-HTTPS_PROXY=
+# Файл с начальными предсказаниями
+INITIAL_PREDICTIONS_FILE=data/initial_predictions.json
 EOL
             created=true
             log "YELLOW" "⚠️ Создан базовый .env файл"
@@ -158,13 +153,13 @@ manage_container() {
     fi
 
     # Проверяем, установлена ли переменная BOT_NAME
-    if [ -z "$BOT_NAME" ]; then
-        log "RED" "❌ Переменная BOT_NAME не установлена. Установите ее в файле .env"
+    if [ -z "$BOT_TOKEN" ]; then
+        log "RED" "❌ Переменная BOT_TOKEN не установлена. Установите ее в файле .env"
         return 1
     fi
 
     # Выводим значение переменной BOT_NAME
-    log "BLUE" "🔍 BOT_NAME: $BOT_NAME"
+    log "BLUE" "🔍 BOT_TOKEN: $BOT_TOKEN"
 
     export DOCKER_UID DOCKER_GID
     export CREATED_BY="$CURRENT_USER"
@@ -173,19 +168,19 @@ manage_container() {
     case $action in
         "restart")
             log "BLUE" "🔄 Перезапуск контейнера..."
-            docker_compose_cmd -f docker/docker-compose.yml down --remove-orphans || force_remove_container
-            docker_compose_cmd -f docker/docker-compose.yml up -d
+            docker_compose_cmd -f docker-compose.yml down --remove-orphans || force_remove_container
+            docker_compose_cmd -f docker-compose.yml up -d
             ;;
         "stop")
             log "BLUE" "⏹️ Остановка контейнера..."
-            docker_compose_cmd -f docker/docker-compose.yml down --remove-orphans || force_remove_container
+            docker_compose_cmd -f docker-compose.yml down --remove-orphans || force_remove_container
             ;;
         "start")
             log "BLUE" "▶️ Запуск контейнера..."
-            if docker ps -a | grep -q "$BOT_NAME"; then
+            if docker ps -a | grep -q "old-timer"; then
                 force_remove_container
             fi
-            docker_compose_cmd -f docker/docker-compose.yml up -d
+            docker_compose_cmd -f docker-compose.yml up -d
             ;;
     esac
 
@@ -193,23 +188,23 @@ manage_container() {
         log "BLUE" "⏳ Ожидание запуска бота..."
         sleep 5
 
-        if ! docker ps | grep -q "$BOT_NAME"; then
+        if ! docker ps | grep -q "old-timer"; then
             log "RED" "❌ Ошибка запуска контейнера"
-            docker_compose_cmd -f docker/docker-compose.yml logs
+            docker_compose_cmd -f docker-compose.yml logs
             return 1
         fi
 
         log "GREEN" "✅ Контейнер запущен"
-        docker_compose_cmd -f docker/docker-compose.yml logs --tail=10
+        docker_compose_cmd -f docker-compose.yml logs --tail=10
     fi
 }
 
 # Функция для принудительного удаления контейнера
 force_remove_container() {
-    if docker ps -a | grep -q "$BOT_NAME"; then
+    if docker ps -a | grep -q "old-timer"; then
         log "YELLOW" "⚠️ Принудительное удаление контейнера..."
-        docker stop "$BOT_NAME"
-        docker rm "$BOT_NAME"
+        docker stop "old-timer"
+        docker rm "old-timer"
     fi
 }
 
@@ -235,7 +230,7 @@ CURRENT_USER=$(whoami)
 # Основное меню
 main_menu() {
     while true; do
-        log "YELLOW" "🤖 Telegram Publisher Bot"
+        log "YELLOW" "🤖 Old-Timer Bot"
         log "YELLOW" "========================"
         log "GREEN" "1. ⬆️ Обновить из репозитория"
         log "GREEN" "2. 📝 Создать или редактировать .env файл"
@@ -245,9 +240,10 @@ main_menu() {
         log "GREEN" "6. ❌ Показать логи ошибок"
         log "GREEN" "7. 🔄 Перезапустить бота"
         log "GREEN" "8. 🧹 Очистить старые логи и бэкапы"
+        log "GREEN" "9. 🧹 Очистить Docker"
         log "GREEN" "0. 🚪 Выйти"
 
-        read -r -p "Выберите действие (0-8): " choice
+        read -r -p "Выберите действие (0-9): " choice
 
         case "$choice" in
             1)
@@ -262,7 +258,6 @@ main_menu() {
             4)
                 manage_container "stop"
                 force_remove_container
-                cleanup_docker # Добавляем очистку Docker
                 ;;
             5)
                 # Показать логи (все)
@@ -289,12 +284,15 @@ main_menu() {
                 # TODO: Implement cleanup old logs and backups
                 log "YELLOW" "⚠️ Функция очистки старых логов и бэкапов еще не реализована."
                 ;;
+            9)
+                cleanup_docker
+                ;;
             0)
                 log "BLUE" "🚪 Выход..."
                 break
                 ;;
             *)
-                log "RED" "❌ Неверный выбор. Пожалуйста, выберите действие от 0 до 8."
+                log "RED" "❌ Неверный выбор. Пожалуйста, выберите действие от 0 до 9."
                 ;;
         esac
     done
