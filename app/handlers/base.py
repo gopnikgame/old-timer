@@ -1,4 +1,4 @@
-﻿from aiogram import Router, F
+from aiogram import Router, F
 from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.filters import Command
 from aiogram import html
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 router = Router()
 prediction_manager = PredictionManager()
 
-# Глобальный счётчик запросов к DeepSeek
+# Глобальный счётчик запросов к DeepSeek (TODO: заменить на более надежное хранилище)
 DEEPSEEK_REQUESTS_COUNT = 0
 
 def build_welcome_message(name: str) -> str:
@@ -38,7 +38,7 @@ async def handle_new_members(message: Message):
             )
             logger.info(f"Sent welcome to {user.id}")
         except Exception as e:
-            logger.error(f"Welcome error: {e}")
+            logger.exception(f"Welcome error: {e}")
 
 def build_help_message() -> str:
     return (
@@ -62,19 +62,19 @@ async def send_help(message: Message):
             disable_web_page_preview=True
         )
     except Exception as e:
-        logger.error(f"Help error: {e}")
+        logger.exception(f"Help error: {e}")
 
 async def generate_with_deepseek(prompt: str) -> str:
     global DEEPSEEK_REQUESTS_COUNT
-    
+
     if DEEPSEEK_REQUESTS_COUNT >= Config.DEEPSEEK_DAILY_LIMIT:
         raise ValueError("Достигнут дневной лимит запросов")
-    
+
     headers = {
         "Authorization": f"Bearer {Config.DEEPSEEK_API_KEY}",
         "Content-Type": "application/json"
     }
-    
+
     payload = {
         "model": "deepseek-chat",
         "messages": [{
@@ -85,46 +85,55 @@ async def generate_with_deepseek(prompt: str) -> str:
         "temperature": 0.7,
         "max_tokens": 100
     }
-    
-    async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.post(
-            "https://api.deepseek.com/v1/chat/completions",
-            json=payload,
-            headers=headers
-        )
-        
-    if response.status_code != 200:
-        raise ConnectionError("Ошибка подключения к API")
-    
-    DEEPSEEK_REQUESTS_COUNT += 1
-    return response.json()["choices"][0]["message"]["content"]
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(
+                "https://api.deepseek.com/v1/chat/completions",
+                json=payload,
+                headers=headers
+            )
+
+        if response.status_code != 200:
+            logger.error(f"DeepSeek API error: {response.status_code} - {response.text}")
+            raise ConnectionError(f"Ошибка подключения к API: {response.status_code}")
+
+        DEEPSEEK_REQUESTS_COUNT += 1
+        return response.json()["choices"][0]["message"]["content"]
+
+    except httpx.RequestError as e:
+        logger.error(f"DeepSeek API connection error: {e}")
+        raise ConnectionError("Ошибка подключения к API") from e
+    except Exception as e:
+        logger.exception(f"DeepSeek API error: {e}")
+        raise
 
 @router.message(F.chat.id == Config.GROUP_ID, Command("add_prediction"))
 async def add_prediction(message: Message):
     if message.from_user.id not in Config.ALLOWED_IDS:
         return await message.reply("❌ Недостаточно прав!")
-    
+
     try:
         prompt = message.text.split(maxsplit=1)[1]
     except IndexError:
         return await message.reply("ℹ️ Укажите текст для генерации предсказания")
-    
+
     try:
         if DEEPSEEK_REQUESTS_COUNT >= Config.DEEPSEEK_DAILY_LIMIT:
             raise ValueError(
                 f"⚠️ Достигнут дневной лимит ({Config.DEEPSEEK_DAILY_LIMIT} запросов). "
                 "Попробуйте завтра."
             )
-            
+
         prediction = await generate_with_deepseek(prompt)
         prediction_manager.add_prediction(prediction)
-        
+
         await message.reply(
             f"✅ Новое предсказание добавлено:\n\n{prediction}\n\n"
             f"Использовано запросов сегодня: {DEEPSEEK_REQUESTS_COUNT}/{Config.DEEPSEEK_DAILY_LIMIT}",
             parse_mode="HTML"
         )
-        
+
     except Exception as e:
         logger.error(f"Prediction error: {e}")
         await message.reply(f"❌ Ошибка: {str(e)}")
