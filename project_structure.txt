@@ -1,20 +1,30 @@
-telegram-publisher-bot/
+old-timer/
 ├── app/
 │   ├── __init__.py
-│   ├── __main__.py
 │   ├── bot.py
 │   ├── config.py
-│   ├── html.py
-│   └── utils.py
-├── docker/
-│   └── docker-compose.yml
-├── logs/
+│   ├── db/
+│   │   ├── __init__.py
+│   │   ├── database.py
+│   │   ├── karma.py
+│   │   └── predictions.py
+│   ├── handlers/
+│   │   ├── __init__.py
+│   │   ├── base.py
+│   ├── middlewares/
+│   │   ├── __init__.py
+│   │   ├── logging.py
+│   │   └── topic_check.py
+│   └── utils/
+│       ├── __init__.py
+│       └── formatting.py
 ├── scripts/
-│   └── manage_bot.sh
-├── .dockerignore
-├── .env
+│   ├── manage_bot.sh
+│   ├── launcher.sh
+├── data/
+│   └── initial_predictions.json
 ├── .env.example
 ├── .gitignore
-├── Dockerfile
-├── README.md
-└── requirements.txt
+├── docker-compose.yml
+├── LICENSE
+└── README.md
