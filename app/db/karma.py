@@ -1,8 +1,11 @@
 import logging
+import time
 
 from app.db.database import db
 
 logger = logging.getLogger(__name__)
+
+LAST_UPDATE_TIMES = {}  # Словарь для хранения времени последнего обновления кармы
 
 async def get_karma(user_id: int) -> int:
     try:
@@ -15,6 +18,14 @@ async def get_karma(user_id: int) -> int:
         return 0
 
 async def update_karma(user_id: int, change: int):
+    global LAST_UPDATE_TIMES
+    now = time.time()
+    last_updated = LAST_UPDATE_TIMES.get(user_id, 0)
+
+    if now - last_updated < 3:
+        logger.info(f"Skipped karma update for user {user_id} (antispam)")
+        return False
+
     try:
         await db.execute(
             """
@@ -25,8 +36,11 @@ async def update_karma(user_id: int, change: int):
             user_id,
             change
         )
+        LAST_UPDATE_TIMES[user_id] = now
+        return True
     except Exception as e:
         logger.exception(f"Error updating karma for user {user_id} with change {change}: {e}")
+        return False
 
 async def get_top_karma(limit: int = 10):
     try:
