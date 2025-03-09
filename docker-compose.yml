@@ -1,10 +1,30 @@
+version: "3.9"
+
 services:
+  db:
+    image: postgres:13
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-botdb}
+
   bot:
     build: .
     env_file:
       - .env
     environment:
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-botdb}
     volumes:
       - ./data:/data
+    depends_on:
+      - db
     restart: unless-stopped
+
+volumes:
+  db_data:
