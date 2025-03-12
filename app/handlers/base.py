@@ -93,7 +93,7 @@ async def private_send_help(message: Message):
         logger.exception(f"Private help error: {e}")
 
 # Добавляем обработчик команды /future, которая упоминается в help_message
-@router.message(F.chat.id == Config.GROUP_ID, Command("future"))
+@router.message(Command("future"))
 async def cmd_future(message: Message):
     try:
         user = message.from_user
@@ -152,7 +152,7 @@ async def generate_with_deepseek(prompt: str) -> str:
         logger.exception(f"DeepSeek API error: {e}")
         raise
 
-@router.message(F.chat.id == Config.GROUP_ID, Command("add_prediction"))
+@router.message(Command("add_prediction"))
 async def add_new_prediction(message: Message):
     if message.from_user.id not in Config.ALLOWED_IDS:
         return await message.reply("❌ Недостаточно прав!")
