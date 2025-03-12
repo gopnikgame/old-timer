@@ -63,7 +63,7 @@ asyncpg>=0.29.0
 ### 🏗 Быстрая установка | Quick Setup
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/gopnikgame/old-timer/main/launcher.sh | sudo bash
+curl -s https://raw.githubusercontent.com/gopnikgame/old-timer/main/launcher.sh -o /tmp/launcher.sh && sudo bash /tmp/launcher.sh
 ```
 
 ### 🔧 Ручная установка | Manual Setup
