@@ -10,7 +10,7 @@ from app.utils.formatting import format_user
 logger = logging.getLogger(__name__)
 router = Router()
 
-@router.message(F.chat.id == Config.GROUP_ID, Command("karma"))
+@router.message(Command("karma"))
 async def show_karma(message: Message):
     try:
         user_id = message.from_user.id
