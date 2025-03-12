@@ -188,7 +188,7 @@ manage_container() {
         log "BLUE" "⏳ Ожидание запуска бота..."
         sleep 5
 
-        if ! docker ps | grep -q "old-timer"; then
+        if ! docker ps | grep -q "old-timer-bot"; then
             log "RED" "❌ Ошибка запуска контейнера"
             docker_compose_cmd -f docker-compose.yml logs
             return 1
