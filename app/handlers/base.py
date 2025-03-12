@@ -1,13 +1,14 @@
 from aiogram import Router, F
 from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.filters import Command
-from aiogram import html
+import html  # Стандартный модуль Python для экранирования HTML
 import httpx
 import logging
 from datetime import datetime
 
 from app.config import Config
-from app.db.predictions import add_prediction  # Import the async add_prediction function
+from app.db.predictions import add_prediction as db_add_prediction  # Переименовываем импортированную функцию
+from app.db.predictions import get_prediction  # Добавляем импорт для /future
 from app.utils.formatting import format_user
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,6 @@ async def cmd_start(message: Message):
         user_name = html.escape(message.from_user.full_name)
         await message.reply(
             text=build_welcome_message(user_name),
-            parse_mode="HTML",
             disable_web_page_preview=True
         )
         logger.info(f"Sent start message to user {message.from_user.id}")
@@ -44,7 +44,6 @@ async def handle_new_members(message: Message):
             safe_name = html.escape(user.full_name)
             await message.reply(
                 text=build_welcome_message(safe_name),
-                parse_mode="HTML",
                 reply_markup=ReplyKeyboardRemove(),
                 disable_web_page_preview=True
             )
@@ -78,11 +77,36 @@ async def send_help(message: Message):
     try:
         await message.reply(
             text=build_help_message(),
-            parse_mode="HTML",
             disable_web_page_preview=True
         )
     except Exception as e:
         logger.exception(f"Help error: {e}")
+
+@router.message(F.chat.type.in_({"private"}), Command("help"))
+async def private_send_help(message: Message):
+    try:
+        await message.reply(
+            text=build_help_message(),
+            disable_web_page_preview=True
+        )
+    except Exception as e:
+        logger.exception(f"Private help error: {e}")
+
+# Добавляем обработчик команды /future, которая упоминается в help_message
+@router.message(F.chat.id == Config.GROUP_ID, Command("future"))
+async def cmd_future(message: Message):
+    try:
+        user = message.from_user
+        prediction = await get_prediction()
+        
+        await message.reply(
+            f"🔮 {format_user(user)}, ваше предсказание:\n\n{prediction}",
+            disable_web_page_preview=True
+        )
+        logger.info(f"Prediction sent to user {user.id}")
+    except Exception as e:
+        logger.exception(f"Future prediction error: {e}")
+        await message.reply("❌ Ошибка при получении предсказания")
 
 async def generate_with_deepseek(prompt: str) -> str:
     global DEEPSEEK_REQUESTS_COUNT
@@ -129,7 +153,7 @@ async def generate_with_deepseek(prompt: str) -> str:
         raise
 
 @router.message(F.chat.id == Config.GROUP_ID, Command("add_prediction"))
-async def add_prediction(message: Message):
+async def add_new_prediction(message: Message):
     if message.from_user.id not in Config.ALLOWED_IDS:
         return await message.reply("❌ Недостаточно прав!")
 
@@ -147,12 +171,11 @@ async def add_prediction(message: Message):
 
         prediction = await generate_with_deepseek(prompt)
         # Use the add_prediction function from app.db.predictions
-        await add_prediction(message.from_user.id, prediction)
+        await db_add_prediction(message.from_user.id, prediction)
 
         await message.reply(
             f"✅ Новое предсказание добавлено:\n\n{prediction}\n\n"
-            f"Использовано запросов сегодня: {DEEPSEEK_REQUESTS_COUNT}/{Config.DEEPSEEK_DAILY_LIMIT}",
-            parse_mode="HTML"
+            f"Использовано запросов сегодня: {DEEPSEEK_REQUESTS_COUNT}/{Config.DEEPSEEK_DAILY_LIMIT}"
         )
 
     except Exception as e:
