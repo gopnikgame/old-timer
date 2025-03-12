@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import json
+import os
 
 import asyncpg
 
@@ -119,9 +120,18 @@ class Database:
 
     async def insert_initial_predictions(self, file_path: str):
         try:
+            logger.info(f"Attempting to load initial predictions from {file_path}")
+            
+            # Проверяем существование файла
+            if not os.path.exists(file_path):
+                logger.error(f"File {file_path} does not exist!")
+                return
+            
             with open(file_path, 'r') as f:
                 predictions = json.load(f)
-
+            
+            logger.info(f"Loaded {len(predictions)} predictions from file")
+            
             for prediction in predictions:
                 user_id = prediction['user_id']
                 prediction_text = prediction['prediction_text']
@@ -133,7 +143,7 @@ class Database:
                     user_id,
                     prediction_text
                 )
-            logger.info(f"Initial predictions inserted from {file_path}")
+            logger.info(f"Initial predictions successfully inserted from {file_path}")
         except Exception as e:
             logger.exception(f"Error inserting initial predictions from {file_path}: {e}")
 
