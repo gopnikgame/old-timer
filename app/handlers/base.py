@@ -24,6 +24,19 @@ def build_welcome_message(name: str) -> str:
         "Напиши /help чтобы увидеть все команды!"
     )
 
+@router.message(F.chat.type.in_({"private"}), Command("start"))
+async def cmd_start(message: Message):
+    try:
+        user_name = html.escape(message.from_user.full_name)
+        await message.reply(
+            text=build_welcome_message(user_name),
+            parse_mode="HTML",
+            disable_web_page_preview=True
+        )
+        logger.info(f"Sent start message to user {message.from_user.id}")
+    except Exception as e:
+        logger.exception(f"Start command error: {e}")
+
 @router.message(F.chat.id == Config.GROUP_ID, F.content_type == "new_chat_members")
 async def handle_new_members(message: Message):
     for user in message.new_chat_members:
