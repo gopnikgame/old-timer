@@ -20,6 +20,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-botdb}
     volumes:
       - ./data:/data
+      - ./logs:/opt/old-timer/logs
     depends_on:
       - db
     restart: unless-stopped
