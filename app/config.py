@@ -26,18 +26,29 @@ class Config:
     INITIAL_PREDICTIONS_FILE = os.getenv("INITIAL_PREDICTIONS_FILE", "/app/data/initial_predictions.json")
 
     # Проверка наличия обязательных переменных
-    if not all([BOT_TOKEN, GROUP_ID, ALLOWED_TOPIC_ID, ALLOWED_TOPIC_URL, ALLOWED_IDS]):
+    # Уберем ALLOWED_TOPIC_ID и ALLOWED_TOPIC_URL из обязательных переменных
+    if not all([BOT_TOKEN, GROUP_ID, ALLOWED_IDS]):
         logger.error("Не заданы обязательные переменные окружения!")
         raise ValueError("Не заданы обязательные переменные окружения!")
 
     try:
         GROUP_ID = int(GROUP_ID)
-        ALLOWED_TOPIC_ID = int(ALLOWED_TOPIC_ID)
+        # Если ALLOWED_TOPIC_ID указан, преобразуем его в число
+        if ALLOWED_TOPIC_ID:
+            ALLOWED_TOPIC_ID = int(ALLOWED_TOPIC_ID)
+        else:
+            # Если ALLOWED_TOPIC_ID не указан, устанавливаем его в None
+            ALLOWED_TOPIC_ID = None
+            
         ALLOWED_IDS = set(map(int, ALLOWED_IDS.split(",")))
         DEEPSEEK_DAILY_LIMIT = int(DEEPSEEK_DAILY_LIMIT)
     except ValueError as e:
         logger.error(f"Ошибка приведения типов переменных окружения: {e}")
         raise
+
+    # Если URL топика не указан, используем заглушку
+    if not ALLOWED_TOPIC_URL:
+        ALLOWED_TOPIC_URL = "этот чат"
 
     GRATITUDE_KEYWORDS = {
         "спасибо", "спс", "сяп", "пасиб",
