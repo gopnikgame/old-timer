@@ -2,7 +2,6 @@ from aiogram import Router, F
 from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.filters import Command
 import html  # Стандартный модуль Python для экранирования HTML
-import httpx
 import logging
 from datetime import datetime
 
@@ -10,12 +9,16 @@ from app.config import Config
 from app.db.predictions import add_prediction as db_add_prediction  # Переименовываем импортированную функцию
 from app.db.predictions import get_prediction  # Добавляем импорт для /future
 from app.utils.formatting import format_user
+from app.utils.gigachat_api import GigaChatAPI  # Импорт нового класса для API
 
 logger = logging.getLogger(__name__)
 router = Router()
 
-# Глобальный счётчик запросов к DeepSeek (TODO: заменить на более надежное хранилище)
-DEEPSEEK_REQUESTS_COUNT = 0
+# Создаем экземпляр класса GigaChatAPI
+gigachat_api = GigaChatAPI()
+
+# Глобальный счётчик запросов к GigaChat
+GIGACHAT_REQUESTS_COUNT = 0
 
 def build_welcome_message(name: str) -> str:
     return (
@@ -108,50 +111,6 @@ async def cmd_future(message: Message):
         logger.exception(f"Future prediction error: {e}")
         await message.reply("❌ Ошибка при получении предсказания")
 
-async def generate_with_deepseek(prompt: str) -> str:
-    global DEEPSEEK_REQUESTS_COUNT
-
-    if DEEPSEEK_REQUESTS_COUNT >= Config.DEEPSEEK_DAILY_LIMIT:
-        raise ValueError("Достигнут дневной лимит запросов")
-
-    headers = {
-        "Authorization": f"Bearer {Config.DEEPSEEK_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [{
-            "role": "user",
-            "content": f"Придумай креативное предсказание для чата на тему: {prompt}. "
-                      "Используй эмодзи и сделай текст живым. Не используй markdown."
-        }],
-        "temperature": 0.7,
-        "max_tokens": 100
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            response = await client.post(
-                "https://api.deepseek.com/v1/chat/completions",
-                json=payload,
-                headers=headers
-            )
-
-        if response.status_code != 200:
-            logger.error(f"DeepSeek API error: {response.status_code} - {response.text}")
-            raise ConnectionError(f"Ошибка подключения к API: {response.status_code}")
-
-        DEEPSEEK_REQUESTS_COUNT += 1
-        return response.json()["choices"][0]["message"]["content"]
-
-    except httpx.RequestError as e:
-        logger.error(f"DeepSeek API connection error: {e}")
-        raise ConnectionError("Ошибка подключения к API") from e
-    except Exception as e:
-        logger.exception(f"DeepSeek API error: {e}")
-        raise
-
 @router.message(Command("add_prediction"))
 async def add_new_prediction(message: Message):
     if message.from_user.id not in Config.ALLOWED_IDS:
@@ -163,19 +122,22 @@ async def add_new_prediction(message: Message):
         return await message.reply("ℹ️ Укажите текст для генерации предсказания")
 
     try:
-        if DEEPSEEK_REQUESTS_COUNT >= Config.DEEPSEEK_DAILY_LIMIT:
+        global GIGACHAT_REQUESTS_COUNT
+        if GIGACHAT_REQUESTS_COUNT >= Config.GIGACHAT_DAILY_LIMIT:
             raise ValueError(
-                f"⚠️ Достигнут дневной лимит ({Config.DEEPSEEK_DAILY_LIMIT} запросов). "
+                f"⚠️ Достигнут дневной лимит ({Config.GIGACHAT_DAILY_LIMIT} запросов). "
                 "Попробуйте завтра."
             )
 
-        prediction = await generate_with_deepseek(prompt)
-        # Use the add_prediction function from app.db.predictions
+        # Используем GigaChatAPI для генерации предсказания
+        prediction = await gigachat_api.generate_prediction(prompt)
+        # Используем существующую функцию для добавления предсказания в БД
         await db_add_prediction(message.from_user.id, prediction)
 
+        GIGACHAT_REQUESTS_COUNT += 1
         await message.reply(
             f"✅ Новое предсказание добавлено:\n\n{prediction}\n\n"
-            f"Использовано запросов сегодня: {DEEPSEEK_REQUESTS_COUNT}/{Config.DEEPSEEK_DAILY_LIMIT}"
+            f"Использовано запросов сегодня: {GIGACHAT_REQUESTS_COUNT}/{Config.GIGACHAT_DAILY_LIMIT}"
         )
 
     except Exception as e:
