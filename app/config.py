@@ -14,9 +14,13 @@ class Config:
     ALLOWED_TOPIC_URL = os.getenv("ALLOWED_TOPIC_URL")
     ALLOWED_IDS = os.getenv("ALLOWED_IDS")
 
-    DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-
-    DEEPSEEK_DAILY_LIMIT = os.getenv("DEEPSEEK_DAILY_LIMIT", "5")
+    # GigaChat API конфигурация
+    GIGACHAT_CLIENT_ID = os.getenv("GIGACHAT_CLIENT_ID")
+    GIGACHAT_CLIENT_SECRET = os.getenv("GIGACHAT_CLIENT_SECRET")
+    GIGACHAT_SCOPE = os.getenv("GIGACHAT_SCOPE", "GIGACHAT_API_PERS")
+    GIGACHAT_BASE_URL = os.getenv("GIGACHAT_BASE_URL", "https://gigachat.devices.sberbank.ru/api/v1")
+    GIGACHAT_AUTH_URL = os.getenv("GIGACHAT_AUTH_URL", "https://ngw.devices.sberbank.ru:9443/api/v2/oauth")
+    GIGACHAT_DAILY_LIMIT = os.getenv("GIGACHAT_DAILY_LIMIT", "5")
 
     # PostgreSQL Configuration
     POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
@@ -41,7 +45,7 @@ class Config:
             ALLOWED_TOPIC_ID = None
             
         ALLOWED_IDS = set(map(int, ALLOWED_IDS.split(",")))
-        DEEPSEEK_DAILY_LIMIT = int(DEEPSEEK_DAILY_LIMIT)
+        GIGACHAT_DAILY_LIMIT = int(GIGACHAT_DAILY_LIMIT)
     except ValueError as e:
         logger.error(f"Ошибка приведения типов переменных окружения: {e}")
         raise
@@ -49,6 +53,7 @@ class Config:
     # Если URL топика не указан, используем заглушку
     if not ALLOWED_TOPIC_URL:
         ALLOWED_TOPIC_URL = "этот чат"
+
 
     GRATITUDE_KEYWORDS = {
         "спасибо", "спс", "сяп", "пасиб",
